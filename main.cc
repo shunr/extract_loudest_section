@@ -42,7 +42,8 @@ class MemMappedFile {
     assert(fd_ != -1);
     // Execute mmap
     if (data_ == MAP_FAILED) {
-      fprintf(stderr, "mmap() failed with %p for '%s'\n", data_, filename.c_str());
+      fprintf(stderr, "mmap() failed with %p for '%s'\n", data_,
+              filename.c_str());
     }
     assert(data_ != MAP_FAILED);
   }
@@ -90,8 +91,7 @@ void TrimToLoudestSegment(const std::vector<float>& input,
 
 Status TrimFile(const std::string& input_filename,
                 const std::string& output_filename,
-                const int64_t desired_length_ms,
-		const float min_volume) {
+                const int64_t desired_length_ms, const float min_volume) {
   MemMappedFile input_file(input_filename);
 
   std::vector<float> wav_samples;
@@ -115,7 +115,7 @@ Status TrimFile(const std::string& input_filename,
       const int frame_index = i * channel_count;
       float total = 0.0f;
       for (int c = 0; c < channel_count; ++c) {
-    	total += wav_samples[frame_index + c];
+        total += wav_samples[frame_index + c];
       }
       mono_samples[i] = total / channel_count;
     }
@@ -131,8 +131,8 @@ Status TrimFile(const std::string& input_filename,
   }
   const float average_volume = total_volume / desired_samples;
   if (average_volume < min_volume) {
-    std::cerr << "Skipped '" << input_filename << "' as too quiet (" 
-	      << average_volume << ")" << std::endl;
+    std::cerr << "Skipped '" << input_filename << "' as too quiet ("
+              << average_volume << ")" << std::endl;
     return Status::OK();
   }
 
@@ -163,46 +163,15 @@ int main(int argc, const char* argv[]) {
         << std::endl;
     return -1;
   }
-  const std::string input_glob = argv[1];
-  glob_t glob_result;
-  glob(input_glob.c_str(), GLOB_TILDE, nullptr, &glob_result);
-  std::vector<std::string> input_filenames;
-  for (int64_t i = 0; i < glob_result.gl_pathc; ++i) {
-    input_filenames.push_back(std::string(glob_result.gl_pathv[i]));
-  }
-  globfree(&glob_result);
-
-  const std::string output_root = argv[2];
-  std::vector<std::string> output_filenames;
-  std::set<std::string> output_dirs;
-  for (const std::string& input_filename : input_filenames) {
-    std::string input_dir;
-    std::string input_base;
-    SplitFilename(input_filename, &input_dir, &input_base);
-    std::string output_filename = output_root + "/" + input_base;
-    output_filenames.push_back(output_filename);
-    std::string output_dir;
-    std::string output_base;
-    SplitFilename(output_filename, &output_dir, &output_base);
-    output_dirs.insert(output_dir);
-  }
-
-  for (const std::string& output_dir : output_dirs) {
-    mkdir(output_dir.c_str(), ACCESSPERMS);
-  }
-
-  assert(input_filenames.size() == output_filenames.size());
-  for (int64_t i = 0; i < input_filenames.size(); ++i) {
-    const std::string input_filename = input_filenames[i];
-    const std::string output_filename = output_filenames[i];
-    const int64_t desired_length_ms = 1000;
-    const float min_volume = 0.004f;
-    Status trim_status =
+  const std::string input_filename = argv[1];
+  const std::string output_filename = argv[2];
+  const int64_t desired_length_ms = 1000;
+  const float min_volume = 0.004f;
+  Status trim_status =
       TrimFile(input_filename, output_filename, desired_length_ms, min_volume);
-    if (!trim_status.ok()) {
-      std::cerr << "Failed on '" << input_filename << "' => '"
-                << output_filename << "' with error " << trim_status;
-    }
+  if (!trim_status.ok()) {
+    std::cerr << "Failed on '" << input_filename << "' => '" << output_filename
+              << "' with error " << trim_status;
   }
 
   return 0;
